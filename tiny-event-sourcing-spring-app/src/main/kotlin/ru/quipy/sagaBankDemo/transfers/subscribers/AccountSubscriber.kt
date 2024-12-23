@@ -7,9 +7,9 @@ import ru.quipy.core.EventSourcingService
 import ru.quipy.sagaBankDemo.accounts.api.AccountAggregate
 import ru.quipy.sagaBankDemo.accounts.api.ExternalAccountTransferDepositFailedEvent
 import ru.quipy.sagaBankDemo.accounts.api.ExternalAccountTransferDepositSuccessEvent
-import ru.quipy.sagaBankDemo.accounts.api.ExternalAccountTransferEvent
 import ru.quipy.sagaBankDemo.accounts.api.ExternalAccountTransferWithdrawFailedEvent
 import ru.quipy.sagaBankDemo.accounts.api.ExternalAccountTransferWithdrawSuccessEvent
+import ru.quipy.sagaBankDemo.transfers.api.ExternalAccountTransferEvent
 import ru.quipy.sagaBankDemo.transfers.api.TransferAggregate
 import ru.quipy.sagaBankDemo.transfers.logic.Transfer
 import ru.quipy.streams.AggregateSubscriptionsManager
@@ -25,7 +25,7 @@ class AccountSubscriber(
 
     @PostConstruct
     fun init() {
-        subscriptionsManager.createSubscriber(AccountAggregate::class, "transfers::accounts-subscriber") {
+        subscriptionsManager.createSubscriber(TransferAggregate::class,"transfers::accounts-subscriber-1") {
             `when`(ExternalAccountTransferEvent::class) { event ->
                 transactionEsService.update(event.transactionId) {
                     it.withdrawMoneyFrom(
@@ -38,6 +38,9 @@ class AccountSubscriber(
                     )
                 }
             }
+        }
+        subscriptionsManager.createSubscriber(AccountAggregate::class, "transfers::accounts-subscriber") {
+
             `when`(ExternalAccountTransferWithdrawSuccessEvent::class) { event ->
                 transactionEsService.update(event.transactionId) {
                     it.depositMoneyTo(
@@ -69,7 +72,7 @@ class AccountSubscriber(
             }
             `when`(ExternalAccountTransferWithdrawFailedEvent::class) { event ->
                 transactionEsService.update(event.transactionId) {
-                    TODO("error event -- catch on account side")
+                    it.notifyTransferFailed(event.transactionId)
                 }
             }
 

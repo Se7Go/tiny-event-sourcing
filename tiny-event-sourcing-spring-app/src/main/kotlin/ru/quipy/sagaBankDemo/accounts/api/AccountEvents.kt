@@ -2,6 +2,7 @@ package ru.quipy.sagaBankDemo.accounts.api
 
 import ru.quipy.core.annotations.DomainEvent
 import ru.quipy.domain.Event
+import ru.quipy.sagaBankDemo.transfers.api.TransferAggregate
 import java.math.BigDecimal
 import java.util.UUID
 
@@ -20,9 +21,6 @@ const val EXTERNAL_ACCOUNT_TRANSFER_ROLLBACK_DEPOSIT = "EXTERNAL_ACCOUNT_TRANSFE
 const val EXTERNAL_ACCOUNT_TRANSFER_DEPOSIT_FAILED = "EXTERNAL_ACCOUNT_TRANSFER_DEPOSIT_FAILED_EVENT"
 const val EXTERNAL_ACCOUNT_TRANSFER_FAILED = "EXTERNAL_ACCOUNT_TRANSFER_FAILED_EVENT"
 
-const val TRANSFER_TRANSACTION_STARTED = "TRANSFER_TRANSACTION_STARTED"
-const val TRANSFER_TRANSACTION_PROCESSED = "TRANSFER_TRANSACTION_PROCESSED"
-const val TRANSFER_TRANSACTION_ROLLBACKED = "TRANSFER_TRANSACTION_ROLLBACKED"
 
 @DomainEvent(name = ACCOUNT_CREATED)
 data class AccountCreatedEvent(
@@ -58,17 +56,7 @@ data class BankAccountWithdrawalEvent(
     name = BANK_ACCOUNT_WITHDRAWAL,
 )
 
-@DomainEvent(name = EXTERNAL_ACCOUNT_TRANSFER)
-data class ExternalAccountTransferEvent(
-    val accountIdFrom: UUID,
-    val bankAccountIdFrom: UUID,
-    val accountIdTo: UUID,
-    val bankAccountIdTo: UUID,
-    val transferAmount: BigDecimal,
-    val transactionId: UUID,
-) : Event<AccountAggregate>(
-    name = EXTERNAL_ACCOUNT_TRANSFER,
-)
+
 
 @DomainEvent(name = EXTERNAL_ACCOUNT_TRANSFER_WITHDRAW_SUCCESS)
 data class ExternalAccountTransferWithdrawSuccessEvent(
@@ -144,7 +132,7 @@ data class ExternalAccountTransferDepositFailedEvent(
     name = EXTERNAL_ACCOUNT_TRANSFER_DEPOSIT_FAILED,
 )
 
-@DomainEvent(name = EXTERNAL_ACCOUNT_TRANSFER_DEPOSIT_FAILED)
+@DomainEvent(name = EXTERNAL_ACCOUNT_TRANSFER_FAILED)
 data class ExternalAccountTransferFailedEvent(
     val accountIdFrom: UUID,
     val bankAccountIdFrom: UUID,
@@ -154,6 +142,6 @@ data class ExternalAccountTransferFailedEvent(
     val transactionId: UUID,
     val message: String = "Limit"
 ) : Event<AccountAggregate>(
-    name = EXTERNAL_ACCOUNT_TRANSFER_DEPOSIT_FAILED,
+    name = EXTERNAL_ACCOUNT_TRANSFER_FAILED,
 )
 

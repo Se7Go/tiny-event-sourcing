@@ -2,6 +2,7 @@ package ru.quipy.sagaBankDemo.transfers.api
 
 import ru.quipy.core.annotations.DomainEvent
 import ru.quipy.domain.Event
+import ru.quipy.sagaBankDemo.accounts.api.EXTERNAL_ACCOUNT_TRANSFER
 import java.math.BigDecimal
 import java.util.UUID
 
@@ -50,6 +51,17 @@ data class ExternalTransferRollbackWithdrawEvent(
     name = EXTERNAL_TRANSFER_ROLLBACK_WITHDRAW,
 )
 
+@DomainEvent(name = EXTERNAL_ACCOUNT_TRANSFER)
+data class ExternalAccountTransferEvent(
+    val accountIdFrom: UUID,
+    val bankAccountIdFrom: UUID,
+    val accountIdTo: UUID,
+    val bankAccountIdTo: UUID,
+    val transferAmount: BigDecimal,
+    val transactionId: UUID,
+) : Event<TransferAggregate>(
+    name = EXTERNAL_ACCOUNT_TRANSFER,
+)
 
 @DomainEvent(name = EXTERNAL_TRANSFER_DEPOSIT)
 data class ExternalTransferDepositEvent(
@@ -84,13 +96,7 @@ data class ExternalTransferSuccessEvent(
 
 @DomainEvent(name = EXTERNAL_TRANSFER_FAILED)
 data class ExternalTransferFailedEvent(
-    val accountIdFrom: UUID,
-    val bankAccountIdFrom: UUID,
-    val accountIdTo: UUID,
-    val bankAccountIdTo: UUID,
-    val transferAmount: BigDecimal,
     val transactionId: UUID,
-    val message: String = "Limit"
 ) : Event<TransferAggregate>(
     name = EXTERNAL_TRANSFER_FAILED,
 )

@@ -11,9 +11,12 @@ import ru.quipy.saga.SagaManager
 import ru.quipy.sagaBankDemo.accounts.api.AccountAggregate
 import ru.quipy.sagaBankDemo.accounts.api.AccountCreatedEvent
 import ru.quipy.sagaBankDemo.accounts.api.BankAccountCreatedEvent
-import ru.quipy.sagaBankDemo.accounts.api.ExternalAccountTransferEvent
+import ru.quipy.sagaBankDemo.accounts.api.BankAccountDepositEvent
 import ru.quipy.sagaBankDemo.accounts.logic.Account
 import ru.quipy.sagaBankDemo.accounts.logic.BankAccount
+import ru.quipy.sagaBankDemo.transfers.api.ExternalAccountTransferEvent
+import ru.quipy.sagaBankDemo.transfers.api.TransferAggregate
+import ru.quipy.sagaBankDemo.transfers.logic.Transfer
 import java.math.BigDecimal
 import java.util.*
 
@@ -21,6 +24,7 @@ import java.util.*
 @RequestMapping("/accounts")
 class AccountController(
     val accountEsService: EventSourcingService<UUID, AccountAggregate, Account>,
+    val transferEsService: EventSourcingService<UUID, TransferAggregate, Transfer>,
     val sagaManager: SagaManager
 ) {
 
@@ -34,6 +38,8 @@ class AccountController(
         return accountEsService.getState(accountId)
     }
 
+    //559442da-f852-4af5-89ef-7b9735c8107a
+    //559442da-f852-4af5-89ef-7b9735c8107f
     @PostMapping("/{accountId}/bankAccount")
     fun createBankAccount(@PathVariable accountId: UUID): BankAccountCreatedEvent {
         return accountEsService.update(accountId) { it.createNewBankAccount() }
@@ -42,6 +48,15 @@ class AccountController(
     @GetMapping("/{accountId}/bankAccount/{bankAccountId}")
     fun getBankAccount(@PathVariable accountId: UUID, @PathVariable bankAccountId: UUID): BankAccount? {
         return accountEsService.getState(accountId)?.bankAccounts?.get(bankAccountId)
+    }
+
+    @GetMapping("/{accountId}/bankAccount/{bankAccountId}/deposit/{amount}")
+    fun deposit(
+        @PathVariable accountId: UUID,
+        @PathVariable bankAccountId: UUID,
+        @PathVariable amount: BigDecimal
+    ): BankAccountDepositEvent {
+        return accountEsService.update(accountId) { it.deposit1(accountId, bankAccountId, amount) }
     }
 
     @GetMapping("/{accountId}/bankAccount/{bankAccountId}/transfer/{toAccountId}/{toBankAccountId}")
@@ -55,7 +70,7 @@ class AccountController(
         val sagaContext = sagaManager
             .launchSaga("TRANSFER", "start transfer money")
             .sagaContext()
-        return accountEsService.create(sagaContext) {
+        return transferEsService.create(sagaContext) {
             it.startTransfer(
                 accountId,
                 bankAccountId,

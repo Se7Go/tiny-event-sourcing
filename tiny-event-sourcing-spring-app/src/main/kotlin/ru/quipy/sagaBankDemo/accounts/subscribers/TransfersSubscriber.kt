@@ -27,7 +27,7 @@ class TransfersSubscriber(
     fun init() {
         subscriptionsManager.createSubscriber(TransferAggregate::class, "accounts::transaction-processing-subscriber") {
             `when`(ExternalTransferWithdrawEvent::class) { event ->
-                logger.info("Got transfer to process: $event")
+                logger.info("Got withdraw transfer to process: $event")
                 accountEsService.update(event.accountIdFrom) { 
                     it.transferFrom(
                         accountIdFrom = event.accountIdFrom,
@@ -53,7 +53,8 @@ class TransfersSubscriber(
                 }
             }
             `when`(ExternalTransferDepositEvent::class) { event ->
-                accountEsService.update(event.accountIdFrom) { 
+                logger.info("Got deposit transfer to process: $event")
+                accountEsService.update(event.accountIdTo) {
                     it.transferTo(
                         accountIdFrom = event.accountIdFrom,
                         bankAccountIdFrom = event.bankAccountIdFrom,

@@ -10,8 +10,9 @@ import ru.quipy.sagaBankDemo.accounts.api.BankAccountDepositEvent
 import ru.quipy.sagaBankDemo.accounts.api.BankAccountWithdrawalEvent
 import ru.quipy.sagaBankDemo.accounts.api.ExternalAccountTransferDepositFailedEvent
 import ru.quipy.sagaBankDemo.accounts.api.ExternalAccountTransferDepositSuccessEvent
-import ru.quipy.sagaBankDemo.accounts.api.ExternalAccountTransferEvent
 import ru.quipy.sagaBankDemo.accounts.api.ExternalAccountTransferFailedEvent
+import ru.quipy.sagaBankDemo.accounts.api.ExternalAccountTransferRollbackDepositEvent
+import ru.quipy.sagaBankDemo.accounts.api.ExternalAccountTransferRollbackWithdrawEvent
 import ru.quipy.sagaBankDemo.accounts.api.ExternalAccountTransferWithdrawFailedEvent
 import ru.quipy.sagaBankDemo.accounts.api.ExternalAccountTransferWithdrawSuccessEvent
 import java.math.BigDecimal
@@ -33,6 +34,23 @@ class Account : AggregateState<UUID, AccountAggregate> {
             throw IllegalStateException("Account $accountId already has ${bankAccounts.size} bank accounts")
 
         return BankAccountCreatedEvent(accountId = accountId, bankAccountId = UUID.randomUUID())
+    }
+    fun deposit1(
+        accountIdTo: UUID,
+        toBankAccountId: UUID,
+        amount: BigDecimal,
+    ): BankAccountDepositEvent {
+        val bankAccount = (bankAccounts[toBankAccountId]
+            ?: throw IllegalArgumentException("No such account to transfer to: $toBankAccountId"))
+
+        if (bankAccount.balance + amount > BigDecimal(10_000_000))
+            throw IllegalStateException("You can't store more than 10.000.000 on account ${bankAccount.id}")
+
+        if (bankAccounts.values.sumOf { it.balance } + amount > BigDecimal(25_000_000))
+            throw IllegalStateException("You can't store more than 25.000.000 in total")
+
+        bankAccount.deposit(amount)
+        return BankAccountDepositEvent(accountIdTo, toBankAccountId, amount)
     }
 
     fun deposit(
@@ -65,23 +83,6 @@ class Account : AggregateState<UUID, AccountAggregate> {
         fromBankAccount.withdraw(amount)
     }
 
-    fun startTransfer(
-        accountIdFrom: UUID,
-        bankAccountIdFrom: UUID,
-        accountIdTo: UUID,
-        bankAccountIdTo: UUID,
-        transferAmount: BigDecimal,
-        transactionId: UUID = UUID.randomUUID(),
-    ): ExternalAccountTransferEvent {
-        return ExternalAccountTransferEvent(
-            accountIdFrom = accountIdFrom,
-            bankAccountIdFrom = bankAccountIdFrom,
-            accountIdTo = accountIdTo,
-            bankAccountIdTo = bankAccountIdTo,
-            transferAmount = transferAmount,
-            transactionId = transactionId,
-        )
-    }
 
     @StateTransitionFunc
     fun createNewBankAccount(event: AccountCreatedEvent) {
@@ -92,6 +93,29 @@ class Account : AggregateState<UUID, AccountAggregate> {
     @StateTransitionFunc
     fun createNewBankAccount(event: BankAccountCreatedEvent) {
         bankAccounts[event.bankAccountId] = BankAccount(event.bankAccountId)
+    }
+    @StateTransitionFunc
+    fun withdrawsuccess(event: ExternalAccountTransferWithdrawSuccessEvent) {
+        bankAccounts[event.bankAccountIdFrom]!!.withdraw(event.transferAmount)
+    }
+    @StateTransitionFunc
+    fun depositsuccess(event: ExternalAccountTransferDepositSuccessEvent) {
+        bankAccounts[event.bankAccountIdTo]!!.deposit(event.transferAmount)
+    }
+    @StateTransitionFunc
+    fun rollback(event: ExternalAccountTransferRollbackDepositEvent) {
+    }
+    @StateTransitionFunc
+    fun rollback(event: ExternalAccountTransferRollbackWithdrawEvent) {
+    }
+    @StateTransitionFunc
+    fun depositfailed(event: ExternalAccountTransferDepositFailedEvent) {
+    }
+    @StateTransitionFunc
+    fun withdrawfailed(event: ExternalAccountTransferWithdrawFailedEvent) {
+    }
+    @StateTransitionFunc
+    fun withdrawfailed(event: ExternalAccountTransferFailedEvent) {
     }
 
     @StateTransitionFunc
@@ -104,9 +128,6 @@ class Account : AggregateState<UUID, AccountAggregate> {
         bankAccounts[event.bankAccountId]!!.withdraw(event.amount)
     }
 
-    @StateTransitionFunc
-    fun startTransfer(event: ExternalAccountTransferEvent) {
-    }
 
     fun transferFrom(
         bankAccountIdTo: UUID,
